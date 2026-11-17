@@ -13,6 +13,7 @@ import socket
 import threading
 import webbrowser
 
+import qr
 from network import Discovery, find_free_port, get_my_ips, WEB_PORT
 from server import FILES_DIR, Hub, make_server
 
@@ -47,6 +48,12 @@ def main():
     print("  Share this link with devices on the same Wi-Fi / hotspot:")
     for link in links:
         print(f"     {link}")
+    # QR code of the first link: phones can just scan the screen
+    try:
+        print(f"\n  Or scan this QR code with a phone ({links[0]}):\n")
+        print(qr.to_terminal(qr.make(links[0])))
+    except UnicodeEncodeError:
+        print("  (QR code can't be shown in this console - use the QR button in the app)")
     print(f"\n  On this computer: http://localhost:{port}")
     print(f"  Received files are saved in: {FILES_DIR}")
     print("  If others can't connect: set Wi-Fi to 'Private' and allow the app in Windows Firewall.")

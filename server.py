@@ -25,6 +25,7 @@ from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
+import qr
 from network import OFFLINE_AFTER
 
 CHUNK_SIZE = 64 * 1024        # read/write files in 64 KB pieces (never whole file in RAM)
@@ -239,6 +240,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.handle_events(qs)
         if url.path == "/api/info":
             return self.send_json(self.share_info())
+        if url.path == "/api/qr.svg":
+            return self.handle_qr(qs.get("text", "")[:150])
         if url.path.startswith("/files/"):
             return self.handle_download(url.path[len("/files/"):], qs)
         return self.serve_static(url.path)
@@ -271,6 +274,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         self.wfile.write(data)
+
+    # ---------- QR code of the share link ----------
+    def handle_qr(self, text):
+        if not text:
+            return self.send_json({"error": "text required"}, 400)
+        body = qr.to_svg(qr.make(text)).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "image/svg+xml")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
 
     # ---------- live events (Server-Sent Events) ----------
     def handle_events(self, qs):

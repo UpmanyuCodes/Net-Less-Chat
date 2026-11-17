@@ -247,6 +247,18 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .viewer { position: fixed; inset: 0; background: #000d; display: grid; place-items: center; z-index: 60; cursor: zoom-out; }
 .viewer img { max-width: 94vw; max-height: 94vh; border-radius: 8px; }
 
+/* QR popup */
+.qr-modal { position: fixed; inset: 0; background: #000b; display: grid; place-items: center; z-index: 55; padding: 20px; }
+.qr-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 22px; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; animation: pop .25s ease-out;
+  width: min(360px, 100%);
+}
+.qr-card strong { font-size: 17px; }
+.qr-card img { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 12px; background: #fff; image-rendering: pixelated; }
+.qr-card code { color: var(--accent); font-size: 15px; font-family: Consolas, monospace; }
+.qr-card button { width: 100%; }
+
 /* scrollbars */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--panel-3); border-radius: 99px; border: 3px solid transparent; background-clip: padding-box; }

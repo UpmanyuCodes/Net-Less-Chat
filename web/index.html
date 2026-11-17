@@ -48,6 +48,7 @@
         <div class="share-row">
           <select id="share-link" class="share-link"></select>
           <button class="btn-small" id="copy-btn">Copy</button>
+          <button class="btn-small" id="qr-btn" title="Show QR code">QR</button>
         </div>
       </div>
 
@@ -95,6 +96,17 @@
         <div>📂<br>Drop files to send</div>
       </div>
     </main>
+  </div>
+
+  <!-- QR code popup -->
+  <div id="qr-modal" class="qr-modal hidden">
+    <div class="qr-card">
+      <strong>Scan to join</strong>
+      <span class="small muted">Connect to the same Wi-Fi / hotspot first</span>
+      <img id="qr-img" alt="QR code of the share link">
+      <code id="qr-link"></code>
+      <button class="btn-primary" id="qr-close">Close</button>
+    </div>
   </div>
 
   <div id="toasts" class="toasts"></div>

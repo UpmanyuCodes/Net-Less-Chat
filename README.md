@@ -14,7 +14,7 @@ Works on laptops, phones, and tablets.
 - 💬 **Everyone room** + **private 1-to-1 chats**
 - 📎 **Send files** of any size with a live progress bar and speed (drag & drop or paste works too)
 - 🖼️ Image previews, **SHA-256 checksum** shown on every file
-- 🔗 **Share link** with a Copy button, so others just open it in a browser
+- 🔗 **Share link** with Copy button + **QR code** (in the console and in the app), so phones just scan it
 - 📶 **Auto-discovery** of other Net-Less Chat rooms on the LAN (UDP broadcast)
 - 🟢 Online dots, unread badges, sound and toast notifications, offline detection
 - 📱 Mobile-friendly dark UI, works **100% offline** (no CDN)
@@ -28,8 +28,9 @@ Works on laptops, phones, and tablets.
 1. Double-click **`NetLessChat.exe`** (build it once, see below).
 2. When Windows Firewall asks, tick **Private** *and* **Public** → **Allow access**.
 3. The browser opens. Enter your name.
-4. The console window shows a link like `http://192.168.137.1:8000`.
-   Share it with others on the same Wi-Fi / hotspot. They open it in **any browser**.
+4. The console window shows a link like `http://192.168.137.1:8000` **and a QR code**.
+   Others on the same Wi-Fi / hotspot scan the QR or type the link in **any browser**.
+   (The **QR** button in the app's sidebar shows it again, bigger.)
 
 ### Option B: with Python (3.11+)
 ```bat
@@ -114,6 +115,7 @@ to show the UDP broadcasts and the TCP 3-way handshake (SYN, SYN-ACK, ACK).
 main.py          starts everything, prints share links, opens the browser
 network.py       IP detection + UDP broadcast discovery
 server.py        HTTP server: chat hub, live events (SSE), file upload/download
+qr.py            pure-Python QR code generator (Reed-Solomon error correction)
 web/             index.html, style.css, app.js, icon.svg (the UI)
 assets/          icon.ico + make_icon.py
 build.bat        builds dist/NetLessChat.exe with PyInstaller
