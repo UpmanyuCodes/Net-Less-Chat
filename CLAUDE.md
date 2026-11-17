@@ -83,7 +83,7 @@ UDP packet: `{"app":"netless-chat","id":"<random>","name":"Upmanyu's laptop","po
 
 ---
 
-# Roadmap (5 phases)
+# Roadmap (5 phases) — all done ✅ (Nov 2026)
 1. **Networking core** — `.gitignore`, `get_my_ips()`, UDP discovery. Test: `python network.py` on two laptops.
 2. **Web server + basic UI** — HTTP server, SSE events, send message, upload/download. Test: chat from a phone.
 3. **Make it nice** — bubbles, avatars, unread badges, file bubbles, empty state, toasts, mobile layout.
