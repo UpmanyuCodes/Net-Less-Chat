@@ -16,6 +16,7 @@ import mimetypes
 import os
 import queue
 import re
+import shutil
 import sys
 import threading
 import time
@@ -53,6 +54,29 @@ def safe_filename(name):
     name = os.path.basename(name.replace("\\", "/")).strip()
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name)
     return name[:150] or "file"
+
+
+def log(text):
+    """Print a timestamped line to the host's console (handy to show in the viva)."""
+    print(time.strftime("[%H:%M:%S]"), text, flush=True)
+
+
+def fmt_size(n):
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.1f} {unit}" if unit != "B" else f"{n} B"
+        n /= 1024
+
+
+def cleanup_partial_files():
+    """Delete half-received files left over from a crash or power cut."""
+    if os.path.isdir(FILES_DIR):
+        for name in os.listdir(FILES_DIR):
+            if name.endswith(".part"):
+                try:
+                    os.remove(os.path.join(FILES_DIR, name))
+                except OSError:
+                    pass
 
 
 def unique_path(folder, filename):
@@ -117,6 +141,7 @@ class Hub:
             q.put({"type": "hello", "you": uid, "room": self.room_name,
                    "users": self.user_list(), "history": history})
             if is_new:
+                log(f"[join]  {name} connected from {ip}")
                 self._broadcast({"type": "users", "users": self.user_list(),
                                  "joined": name})
             else:
@@ -147,6 +172,7 @@ class Hub:
                         if not u["streams"] and now - u["last_seen"] > OFFLINE_AFTER]
                 for uid in gone:
                     name = self.users.pop(uid)["name"]
+                    log(f"[leave] {name} went offline (no connection for {OFFLINE_AFTER}s)")
                     self._broadcast({"type": "users", "users": self.user_list(), "left": name})
 
     # ---------- messages ----------
@@ -308,6 +334,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "That user went offline."}, 409)
 
         os.makedirs(FILES_DIR, exist_ok=True)
+        # Refuse early if the host's disk can't hold the file (keep 100 MB spare)
+        if shutil.disk_usage(FILES_DIR).free - size < 100 * 1024 * 1024:
+            self.close_connection = True   # don't try to read the huge body
+            return self.send_json({"error": "Host computer's disk is full"}, 507)
+
+        sender_name = self.hub.users.get(uid, {}).get("name", "?")
+        log(f"[file]  receiving '{filename}' ({fmt_size(size)}) from {sender_name} @ {self.client_address[0]}")
+        started = time.time()
         file_id = uuid.uuid4().hex
         temp_path = os.path.join(FILES_DIR, f".{file_id}.part")
         sha = hashlib.sha256()
@@ -329,6 +363,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if received != size:
             # Incomplete transfer: delete the partial file, never keep broken data.
+            log(f"[file]  '{filename}' INTERRUPTED at {fmt_size(received)} / {fmt_size(size)} - partial file deleted")
             try:
                 os.remove(temp_path)
             except OSError:
@@ -350,8 +385,17 @@ class Handler(BaseHTTPRequestHandler):
             "file_id": file_id, "filename": filename, "size": size, "sha256": digest,
             "ts": time.time(),
         }
+        secs = max(time.time() - started, 0.001)
+        log(f"[file]  '{os.path.basename(final_path)}' done in {secs:.1f}s "
+            f"({fmt_size(size / secs)}/s), SHA-256 {digest[:16]}...")
         err = self.hub.deliver(msg)
         if err:
+            # Recipient left while we were receiving: nobody can download it, so delete it.
+            self.hub.files.pop(file_id, None)
+            try:
+                os.remove(final_path)
+            except OSError:
+                pass
             return self.send_json({"error": err}, 409)
         self.send_json({"ok": True, "sha256": digest})
 
@@ -377,9 +421,20 @@ class Handler(BaseHTTPRequestHandler):
             pass  # receiver cancelled / disconnected
 
 
+class ChatServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        """A client vanishing (Wi-Fi off, tab closed) is normal on a LAN - don't print a traceback."""
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionError, TimeoutError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def make_server(port, hub, share_info):
+    cleanup_partial_files()
     Handler.hub = hub
     Handler.share_info = staticmethod(share_info)
-    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)   # 0.0.0.0 = listen on every network interface
-    server.daemon_threads = True
+    server = ChatServer(("0.0.0.0", port), Handler)   # 0.0.0.0 = listen on every network interface
     return server
