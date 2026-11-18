@@ -17,6 +17,7 @@ import os
 import queue
 import re
 import shutil
+import socket
 import sys
 import threading
 import time
@@ -212,6 +213,19 @@ class Handler(BaseHTTPRequestHandler):
     # Quieter console: only log errors
     def log_message(self, fmt, *args):
         pass
+
+    def handle(self):
+        """Phones' browsers often try https:// first. A TLS handshake starts with byte 0x16.
+        We have no certificate (no internet), so we just close the connection: the browser
+        then falls back to plain http:// instead of showing 'can't provide a secure connection'."""
+        try:
+            first = self.connection.recv(1, socket.MSG_PEEK)   # look at the first byte without consuming it
+        except OSError:
+            return
+        if first == b"\x16":
+            log(f"[https] {self.client_address[0]} tried https:// - closing so the browser falls back to http://")
+            return
+        super().handle()
 
     # ---------- small response helpers ----------
     def send_json(self, obj, status=200):
