@@ -517,11 +517,19 @@ async function loadInfo() {
     const info = await r.json();
     $('#join-room').textContent = '📶 ' + info.room;
     $('#room-name').textContent = info.room;
-    const links = info.links.join('|');
+    const links = info.links.map((l) => l.url).join('|');
     if (links !== lastLinks) {
       lastLinks = links;
       const sel = $('#share-link');
-      sel.replaceChildren(...info.links.map((l) => Object.assign(el('option', '', l), { value: l })));
+      // Prefer the link the current browser used to reach us (it is known to work)
+      const here = location.origin;
+      sel.replaceChildren(...info.links.map((l) => {
+        const o = el('option', '', `${l.url}  (${l.label})`);
+        o.value = l.url;
+        o.dataset.label = l.label;
+        o.selected = l.url === here;
+        return o;
+      }));
     }
     const box = $('#server-list');
     box.replaceChildren();
@@ -555,6 +563,9 @@ $('#qr-btn').addEventListener('click', () => {
   if (!link) return;
   $('#qr-img').src = '/api/qr.svg?text=' + encodeURIComponent(link);
   $('#qr-link').textContent = link;
+  const opt = $('#share-link').selectedOptions[0];
+  $('#qr-net').textContent = 'For devices on ' + (opt ? opt.dataset.label : 'the same network')
+    + ($('#share-link').options.length > 1 ? ' — pick another link in the sidebar for other networks' : '');
   $('#qr-modal').classList.remove('hidden');
 });
 $('#qr-close').addEventListener('click', () => $('#qr-modal').classList.add('hidden'));

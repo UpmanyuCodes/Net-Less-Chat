@@ -56,6 +56,20 @@ def get_my_ips():
     return good or ["127.0.0.1"]
 
 
+def describe_ip(ip):
+    """Guess which kind of network an IP belongs to, so users pick the right link.
+    (Hotspots use well-known private subnets.)"""
+    if ip.startswith("192.168.137."):
+        return "this laptop's Mobile Hotspot"
+    if ip.startswith("172.20.10."):
+        return "iPhone hotspot"
+    if ip.startswith("192.168.43.") or ip.startswith("10.42."):
+        return "Android hotspot"
+    if ip == "127.0.0.1":
+        return "this computer only"
+    return "Wi-Fi / LAN"
+
+
 def find_free_port(start=WEB_PORT, tries=20):
     """Find a free TCP port starting at `start` (a port can be used by one server only)."""
     for port in range(start, start + tries):

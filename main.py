@@ -14,7 +14,7 @@ import threading
 import webbrowser
 
 import qr
-from network import Discovery, find_free_port, get_my_ips, WEB_PORT
+from network import Discovery, describe_ip, find_free_port, get_my_ips, WEB_PORT
 from server import FILES_DIR, Hub, make_server
 
 
@@ -32,7 +32,8 @@ def main():
     def share_info():
         return {
             "room": args.name,
-            "links": [f"http://{ip}:{port}" for ip in get_my_ips()],
+            # One link per network this laptop is connected to (Wi-Fi, hotspot, ...)
+            "links": [{"url": f"http://{ip}:{port}", "label": describe_ip(ip)} for ip in get_my_ips()],
             "servers": discovery.get_peers(),
         }
 
@@ -45,15 +46,21 @@ def main():
     print("  Net-Less Chat is running  (no internet needed)")
     print(f"  Room: {args.name}")
     print(line)
-    print("  Share this link with devices on the same Wi-Fi / hotspot:")
+    if len(links) > 1:
+        print("  This laptop is on more than one network.")
+        print("  Use the link of the network the OTHER device is connected to:")
+    else:
+        print("  Share this link with devices on the same Wi-Fi / hotspot:")
     for link in links:
-        print(f"     {link}")
-    # QR code of the first link: phones can just scan the screen
-    try:
-        print(f"\n  Or scan this QR code with a phone ({links[0]}):\n")
-        print(qr.to_terminal(qr.make(links[0])))
-    except UnicodeEncodeError:
-        print("  (QR code can't be shown in this console - use the QR button in the app)")
+        print(f"     {link['url']:<28} <- devices on {link['label']}")
+    # QR code for every link: phones can just scan the screen
+    for link in links:
+        try:
+            print(f"\n  Scan if the phone is on {link['label']}  ({link['url']}):\n")
+            print(qr.to_terminal(qr.make(link["url"])))
+        except UnicodeEncodeError:
+            print("  (QR code can't be shown in this console - use the QR button in the app)")
+            break
     print(f"\n  On this computer: http://localhost:{port}")
     print(f"  Received files are saved in: {FILES_DIR}")
     print("  If others can't connect: set Wi-Fi to 'Private' and allow the app in Windows Firewall.")
